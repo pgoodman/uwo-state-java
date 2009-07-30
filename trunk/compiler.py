@@ -353,7 +353,7 @@ def check_contracts():
 
                 raise JTypeError(
                     ("Class '%s' is missing methods from interface " +
-                     "'%s' in %s:\n%s.")
+                     "'%s' in %s:\n%s")
                     % (klass.name, parent, klass.file, "".join(err_str))
                 )
 
@@ -658,6 +658,12 @@ def compile_classes():
     return new_project_dir
 
 def test_compiler():
+    """
+    test_compiler(void) -> void
+    
+    Run the compiler through the basic failure test cases. Each test should
+    result in either a failure or a warning.
+    """
     tests = (
         "./test/ConstructorNoState",
         "./test/ChildConstructorNoState",
@@ -682,7 +688,6 @@ def test_compiler():
     print "\n-------------------------------------------"
     print "Done testing."
 
-# test the (source-to-source) compiler
 if __name__ == "__main__":
     compile_project("./example/")
-
+    #test_compiler()

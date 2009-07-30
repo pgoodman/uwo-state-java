@@ -30,17 +30,31 @@ class JavaType(object):
         
         Construct a new Java type.
         """
+        
         self.file = class_file
         self.name = None
-        self.inheritable_methods = [ ]
-        self.params = { }
-        self.transitions = { }
-        self.states = Set()
-        self.method_states = Set()
-        self.parents = Set()
-        self.constructor_states = Set()
+        
+        # dictionary of method sets indexed by method type signature
+        # each method set contains methods from the same class with the
+        # same type signature
         self.state_methods = { }
+        
+        # a list of non-state transitioning methods (static, private,
+        # protected)
         self.non_state_methods = [ ]
+
+        self.params = { } # instance variables
+        self.transitions = { } # dictionary indexed by state transition
+        
+        # set of all states used in method transitions
+        self.method_states = Set()
+        self.constructor_states = Set() # set of initialization states
+        self.states = Set() # set of all class states
+        
+        # set of names of parent types. this ends up having any non-type-
+        # checkable names removed
+        self.parents = Set()
+        
         self.is_interface = False
         self.header_span = None # bounds for the header of the class
         self.import_span = None # bounds for the imports / package
@@ -48,18 +62,20 @@ class JavaType(object):
         self.id = JavaType.id
         JavaType.id += 1
     
-    def add_param(self, name, header, type):
+    def add_param(self, name, header):
+        """
+        add_param(string, (int, int)) -> void
+        
+        Add a class parameter to this type.
+        """
         if name in self.params:
             raise JTypeError(
                 ("Parameter '%s' in class '%s' cannot be " +
                  "defined more than once in %s.") 
                 % (name, self.name, self.file)
             )
-        self.params[name] = {
-            'name': name,
-            'header': (start_header, end_header),
-            'type': return_type,
-        }
+            
+        self.params[name] = (name, header)
         
     def check_if_constructors(self, method, other_method):
         """
@@ -140,9 +156,6 @@ class JavaType(object):
         
         d = self.transitions[trans][method.name]
         if method.signature not in d:
-            self.inheritable_methods.append(
-                (from_state, to_state, method)
-            )
             d[method.signature] = method
         
         # if we are adding a transition for an inherited method then
@@ -153,6 +166,17 @@ class JavaType(object):
             d = self.state_methods[method.name]
             if method.signature in d:
                 d[method.signature].has_parent_impl = True
+    
+    def method_transitions(self):
+        """
+        method_transitions(void) -> Generator<tuple(string, string, JavaMethod)>
+        
+        Generate the methods and their state transitions.
+        """
+        for from_state, to_state in self.transitions:
+            for methods in self.transitions[from_state, to_state].values():
+                for method in methods.values():
+                    yield (from_state, to_state, method)
     
     def has_transition(self, from_state, to_state, name, signature):
         """

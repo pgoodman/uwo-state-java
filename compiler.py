@@ -263,32 +263,31 @@ def add_method_transitions():
             )
     
     for klass in state_classes():
-        for method_sigs in klass.state_methods.values():
-            for method_set in method_sigs.values():
-                unchecked = method_set.copy()
+        for method_set in klass.method_sets():
+            unchecked = method_set.copy()
+            
+            # add in the transitions.
+            for method in method_set:
+                unchecked.remove(method)
                 
-                # add in the transitions.
-                for method in method_set:
-                    unchecked.remove(method)
-                    
-                    if method.is_constructor and not len(method.from_states):
-                        raise JStateError(
-                            "Missing initial state on class "+
-                            "constructor in %s:%d." 
-                            % (method.file, method.line)
-                        )
-                    
-                    # go check for non-deterministic transitions, this
-                    # check is for local class only
-                    for other in unchecked:
-                        check_if_method_deterministic(
-                            method,
-                            other
-                        )
-                    
-                    # add in the transitions
-                    for state in method.from_states:
-                        klass.add_transition(state, method)
+                if method.is_constructor and not len(method.from_states):
+                    raise JStateError(
+                        "Missing initial state on class "+
+                        "constructor in %s:%d." 
+                        % (method.file, method.line)
+                    )
+                
+                # go check for non-deterministic transitions, this
+                # check is for local class only
+                for other in unchecked:
+                    check_if_method_deterministic(
+                        method,
+                        other
+                    )
+                
+                # add in the transitions
+                for state in method.from_states:
+                    klass.add_transition(state, method)
 
 def inherit_methods(parent_klass, klass):
     """
@@ -296,7 +295,8 @@ def inherit_methods(parent_klass, klass):
 
     Copy methods from the parent class into the child class.
     """
-    for trans_from, trans_to, method in parent_klass.inheritable_methods:                    
+    
+    for trans_from, trans_to, method in parent_klass.method_transitions():                    
         # constructors are not inherited
         if method.is_constructor:
             has_constructor = klass.has_transition(
@@ -394,26 +394,29 @@ def check_state_reachability():
             )
 
 def make_trans_table():
+    """
+    make_trans_table(void) -> matrix
     
+    Make the state transition table. The table is used as:
+    [current-state-id][current-method-id] -> new-state-id
+    Each method id represents a method set, and each state id represents
+    one of the various states.
+    """
     m = [ ]
     num_methods = len(method_ids)
     
+    # build the base table
     for _ in state_ids:
         m.append([-1] * num_methods)
     
+    # collect the methods. this will collect the same method several
+    # times (as a result of inheritance / many start states), but 
+    # that's not an issue!
     for klass in state_classes():        
-        # collect the methods. this will collect the same method several
-        # times (as a result of inheritance / many start states), but 
-        # that's not an issue!
-        for trans_from, trans_to in klass.transitions:
-            method_transitions = klass.transitions[trans_from, trans_to]
-            for methods in method_transitions.values():
-                for method in methods.values():   
-                    # should not be possible, but may as well check!
-                    j = m[state_ids[trans_from]][method_ids[method]]
-                    m[state_ids[trans_from]][method_ids[method]] = (
-                        state_ids[trans_to]
-                    )
+        for from_state, to_state, method in klass.method_transitions():
+            j = m[state_ids[from_state]][method_ids[method]]
+            m[state_ids[from_state]][method_ids[method]] = state_ids[to_state]
+                    
     return m
 
 def compile_trans_class_file(package_name, new_project_dir):
@@ -483,13 +486,14 @@ def compile_state_method(klass, method_set, nf, old):
     # if we have many state methods within one state then we need to
     # make sure that each one is being given the proper variable names.
     def normalize_var_names(param_names, type_bounds):
-        for i in xrange(len(param_names)):
-            if base_method.param_names[i] != param_names[i]:
+        things = zip(base_method.param_names, param_names, type_bounds)
+        for old_param, new_param, param_bounds in things:
+            if old_param != new_param:
                 nf.write(
                     "\t\t\t\t%s %s = %s;\n" % (
-                        old[type_bounds[i][0]:type_bounds[i][1]],
-                        param_names[i], 
-                        base_method.param_names[i],
+                        old[param_bounds[0]:param_bounds[1]],
+                        new_param, 
+                        old_param,
                     )
                 )
     
@@ -513,7 +517,7 @@ def compile_state_method(klass, method_set, nf, old):
             nf.write("\t\t\tthis.__cs = this.__ps;\n")
             nf.write(call_parent_impl())
         
-        # no parent, error
+        # base case: no parent, error
         else:
             nf.write(
                 "\t\t\tSM.error(\"%s::%s\", __ps);\n" 
@@ -524,19 +528,29 @@ def compile_state_method(klass, method_set, nf, old):
     
     nf.write("\t\ttry {\n")
     
+    # the method set contains at least two methods, i.e. we need to merge the
+    # bodies of many methods into one method.
     if len(method_set):
         method_set.add(method)
         nf.write("\t\t\tswitch(this.__ps) {\n")
+        
         for method in method_set:
             nf.write("\t\t\t")
             for from_state in method.from_states:
                 nf.write("case %d: " % state_ids[from_state])
             nf.write("\n\t\t\t{\n")
+            
+            # make sure that method parameter names are adjusted if the
+            # various methods use different param names (but with the same
+            # types, of course)
             normalize_var_names(method.param_names, method.type_bounds)
+            
             nf.write(old[method.body_span[0]:method.body_span[1]][1:])
             nf.write("\n\t\t\t}\n")
             nf.write("\t\t\tbreak;\n")
         nf.write("\t\t\t}\n")
+    
+    # life is easy, only one method to deal with
     else:
         nf.write(old[method.body_span[0]:method.body_span[1]][1:])
     
@@ -576,16 +590,20 @@ def compile_class_file(klass, package_name, of, nf):
     nf.write(old[klass.header_span[0]:klass.header_span[1]])
     nf.write("{\n")
     
-    # params
+    # previous and current state parameters
     if not len(klass.parents):
         nf.write("\tprotected int __cs, __ps;\n")
-    for param in klass.params.values():
-        nf.write(old[param['header'][0]:param['header'][1]])
+    
+    # params
+    for name, (start_param, end_param) in klass.params.values():
+        nf.write(old[start_param:end_param])
         nf.write("\n")
     
+    # state transitioning methods
     for method_set in klass.method_sets():
         compile_state_method(klass, method_set, nf, old)
     
+    # non-state methods
     for header_span, body_span, _, _ in klass.non_state_methods:
         compile_non_state_method(header_span, body_span, nf, old)
     

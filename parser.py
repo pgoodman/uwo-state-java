@@ -369,7 +369,7 @@ def parse_class_body():
                     repeat(lambda: (not peek("SEMICOLON")) and accept())
                     end_header = accept("SEMICOLON")
                 end_header = end_header.lexpos+1
-                klass.add_param(name, (start_header, end_header), return_type)
+                klass.add_param(name, (start_header, end_header))
         else:
             tok = peek()
             raise ParseError(

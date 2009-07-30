@@ -14,6 +14,10 @@
 from sets import Set
 
 class JavaMethodSet(Set):
+    """
+    Represents a set of methods with the same type signature but disjoint
+    sets of starting transition states.
+    """
     
     id_count = 0
     
@@ -47,11 +51,17 @@ class JavaMethodSet(Set):
         method.set = self
     
 class JavaMethod(object):
+    """
+    Represents a single public method from as it appears in a .java file. For
+    example, if two methods have the same name and type signatures in the same
+    .java file then they will *each* be represented by a distinct JavaMethod
+    instance.
+    """    
     
-    methods = Set()
+    methods = Set() # set of all JavaMethod instances
     
     def __init__(self, **kargs):
-        self.__dict__.update(kargs)
+        self.__dict__.update(kargs) # I'm lazy :P go look in parser.py
         self.has_parent_method = False
         self.set = None
         JavaMethod.methods.add(self)

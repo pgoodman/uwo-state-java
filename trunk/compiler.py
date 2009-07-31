@@ -372,7 +372,8 @@ def check_state_reachability():
         
         # build the set of transitions
         for from_state, to_state, _ in klass.method_transitions():
-            transitions.add((from_state, to_state))
+            if from_state != to_state:
+                transitions.add((from_state, to_state))
         
         # check state reachability by transitivity
         while keep_going and len(transitions):
@@ -413,14 +414,19 @@ def make_trans_table():
     for _ in state_ids:
         m.append([-1] * num_methods)
     
-    # collect the methods. this will collect the same method several
-    # times (as a result of inheritance / many start states), but 
-    # that's not an issue!
-    for klass in state_classes():        
-        for from_state, to_state, method in klass.method_transitions():
-            j = m[state_ids[from_state]][method_ids[method]]
-            m[state_ids[from_state]][method_ids[method]] = state_ids[to_state]
-                    
+    # add in the transitions
+    def add_transitions(parent_klass, klass):
+        # collect the methods. this will collect the same method several
+        # times (as a result of inheritance / many start states), but 
+        # that's not an issue!
+        for klass in state_classes():
+            for from_state, to_state, method in klass.method_transitions():
+                j = m[state_ids[from_state]][method_ids[method]]
+                m[state_ids[from_state]][method_ids[method]] = state_ids[to_state]
+    
+    # this is to make sure that we add the transitions in the correct order
+    rec_propagate(add_transitions)
+    
     return m
 
 def compile_trans_class_file(package_name, new_project_dir):

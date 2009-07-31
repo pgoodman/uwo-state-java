@@ -4,7 +4,7 @@ public class Auto {
 	protected int __cs, __ps;
 	public void turnOff() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][6]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][7]) < 0) {
 			SM.error("Auto::turnOff", __ps);
 		}
 		try {
@@ -18,7 +18,7 @@ public class Auto {
 	}
 	public void reverse() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][0]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][1]) < 0) {
 			SM.error("Auto::reverse", __ps);
 		}
 		try {
@@ -43,7 +43,7 @@ public class Auto {
 	}
 	public void forward() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][4]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][6]) < 0) {
 			SM.error("Auto::forward", __ps);
 		}
 		try {
@@ -71,7 +71,7 @@ public class Auto {
 	}
 	public void neutral() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][3]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][4]) < 0) {
 			SM.error("Auto::neutral", __ps);
 		}
 		try {
@@ -85,7 +85,7 @@ public class Auto {
 	}
 	public void turnOn() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][1]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][0]) < 0) {
 			SM.error("Auto::turnOn", __ps);
 		}
 		try {

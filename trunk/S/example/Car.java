@@ -15,7 +15,7 @@ public class Car extends Auto {
 	}
 	public void reverse() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][7]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][3]) < 0) {
 			this.__cs = this.__ps;
 			super.reverse();
 			return;

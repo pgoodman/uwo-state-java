@@ -38,9 +38,9 @@ def compile_project(project_dir):
         if parse_project(project_dir):
             print "Checking Types..."
             check_parents()
-            rec_propogate(inherit_states, check_method_states)
+            rec_propagate(inherit_states, check_method_states)
             add_method_transitions()
-            rec_propogate(inherit_methods)
+            rec_propagate(inherit_method_transitions)
             check_contracts()
             check_state_reachability()
 
@@ -166,21 +166,21 @@ def check_parents():
         klass.parents.difference_update(to_remove)
         to_remove.clear()
 
-def rec_propogate(each_fn, all_fn = (lambda x: x)):
+def rec_propagate(each_fn, all_fn = (lambda x: x)):
     """
-    rec_propogate(function, function) -> void
+    rec_propagate(function, function) -> void
 
-    General purpose method to propogate data from a parent class to
+    General purpose method to propagate data from a parent class to
     a child class.
     """
-    def propogate(klass, unseen_types):
+    def propagate(klass, unseen_types):
         for parent in klass.parents:
             parent_klass = types[parent]
             if parent_klass.is_interface:
                 continue
             if parent_klass in unseen_types:
                 unseen_types.remove(parent_klass)
-                propogate(parent_klass, unseen_types)
+                propagate(parent_klass, unseen_types)
             each_fn(parent_klass, klass)
         all_fn(klass)
 
@@ -192,7 +192,7 @@ def rec_propogate(each_fn, all_fn = (lambda x: x)):
 
     while len(unseen_types):
         klass = unseen_types.pop()
-        propogate(klass, unseen_types)
+        propagate(klass, unseen_types)
 
 def inherit_states(parent_klass, klass):
     """
@@ -289,9 +289,9 @@ def add_method_transitions():
                 for state in method.from_states:
                     klass.add_transition(state, method)
 
-def inherit_methods(parent_klass, klass):
+def inherit_method_transitions(parent_klass, klass):
     """
-    inherit_methods(JavaType, JavaType) -> void
+    inherit_method_transitions(JavaType, JavaType) -> void
 
     Copy methods from the parent class into the child class.
     """

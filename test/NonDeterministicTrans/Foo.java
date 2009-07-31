@@ -10,9 +10,7 @@ package test.NonDeterministicTrans;
  */
 class Foo {
     states { :A, :B }
-    public Foo() :A { }
-    
-    
+    public Foo() :A { } 
     public void bar() { }
     public void bar() :A -> :B { }
 }

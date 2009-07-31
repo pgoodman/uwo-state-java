@@ -145,16 +145,13 @@ class JavaType(object):
         """      
         # add the transition, method.to_state is None if the method has
         # an identity transition
-        to_state = method.to_state or from_state
-        trans = (from_state, to_state)
+        if from_state not in self.transitions:
+            self.transitions[from_state] = { }
         
-        if trans not in self.transitions:
-            self.transitions[trans] = { }
+        if method.name not in self.transitions[from_state]:
+            self.transitions[from_state][method.name] = { }
         
-        if method.name not in self.transitions[trans]:
-            self.transitions[trans][method.name] = { }
-        
-        d = self.transitions[trans][method.name]
+        d = self.transitions[from_state][method.name]
         if method.signature not in d:
             d[method.signature] = method
         
@@ -173,10 +170,10 @@ class JavaType(object):
         
         Generate the methods and their state transitions.
         """
-        for from_state, to_state in self.transitions:
-            for methods in self.transitions[from_state, to_state].values():
+        for from_state in self.transitions:
+            for methods in self.transitions[from_state].values():
                 for method in methods.values():
-                    yield (from_state, to_state, method)
+                    yield (from_state, method.to_state or from_state, method)
     
     def has_transition(self, from_state, to_state, name, signature):
         """
@@ -185,14 +182,15 @@ class JavaType(object):
         Check whether or not the current type has a method that matches
         the type signature of the JavaMethod instance passed in.
         """
-        trans = (from_state, to_state)
-        if trans not in self.transitions:
+        if from_state not in self.transitions:
             return False
-        elif name not in self.transitions[trans]:
+        elif name not in self.transitions[from_state]:
             return False
-        elif signature not in self.transitions[trans][name]:
+        elif signature not in self.transitions[from_state][name]:
             return False
-        return True
+        
+        m = self.transitions[from_state][name][signature]
+        return (m.to_state or from_state) == to_state
     
     def method_sets(self):
         """

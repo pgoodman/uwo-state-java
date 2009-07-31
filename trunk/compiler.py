@@ -367,8 +367,12 @@ def check_state_reachability():
     
     for klass in state_classes():
         reachable = klass.constructor_states.copy()
-        transitions = Set(klass.transitions.keys())
+        transitions = Set()
         keep_going = True
+        
+        # build the set of transitions
+        for from_state, to_state, _ in klass.method_transitions():
+            transitions.add((from_state, to_state))
         
         # check state reachability by transitivity
         while keep_going and len(transitions):

@@ -18,7 +18,7 @@ public class Auto {
 	}
 	public void reverse() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][7]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][0]) < 0) {
 			SM.error("Auto::reverse", __ps);
 		}
 		try {
@@ -43,7 +43,7 @@ public class Auto {
 	}
 	public void forward() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][3]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][4]) < 0) {
 			SM.error("Auto::forward", __ps);
 		}
 		try {
@@ -71,7 +71,7 @@ public class Auto {
 	}
 	public void neutral() {
 		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][2]) < 0) {
+		if((this.__cs = SM.trans[this.__cs][3]) < 0) {
 			SM.error("Auto::neutral", __ps);
 		}
 		try {

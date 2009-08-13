@@ -414,8 +414,7 @@ def make_trans_table():
     for _ in state_ids:
         m.append([-1] * num_methods)
     
-    # add in the transitions
-    def add_transitions(parent_klass, klass):
+    def add_transitions(_, klass):
         # collect the methods. this will collect the same method several
         # times (as a result of inheritance / many start states), but 
         # that's not an issue!
@@ -500,7 +499,7 @@ def compile_state_method(klass, method_set, nf, old):
         for old_param, new_param, param_bounds in things:
             if old_param != new_param:
                 nf.write(
-                    "\t\t\t\t%s %s = %s;\n" % (
+                    "\t\t\t%s %s = %s;\n" % (
                         old[param_bounds[0]:param_bounds[1]],
                         new_param, 
                         old_param,
@@ -510,27 +509,31 @@ def compile_state_method(klass, method_set, nf, old):
     # constructor, initialize the class to a state.
     if method.is_constructor:
         nf.write(
-            "\t\tthis.__cs = %d;\n" % state_ids[method.to_state]
+            "\t\tthis.__ns = %d;\n" % state_ids[method.to_state]
         )
     
     # normal state method
     else:
-        nf.write("\t\tthis.__ps = this.__cs;\n")
+        if method_set.has_parent_impl:
+            nf.write("\t\tboolean __wis = this.__is;\n")
+        
         nf.write(
-            "\t\tif((this.__cs = SM.trans[this.__cs][%d]) < 0) {\n" 
-            % method_ids[method]            
+            "\t\tif(!this.__checkTrans(%d)) {\n" % method_ids[method]            
         )
         
         # defer check to parent class implementation. this mechanism
         # allows for specialization of parent methods on a state level.
+        # this will add in a check to see if we were calling from within a
+        # state transition already, and if so, to make it seem like we're not
+        # calling within a state transition
         if method_set.has_parent_impl:
-            nf.write("\t\t\tthis.__cs = this.__ps;\n")
+            nf.write("\t\t\tif(!__wis) {\n\t\t\t\tthis.__is = false;\n\t\t\t}\n")
             nf.write(call_parent_impl())
         
         # base case: no parent, error
         else:
             nf.write(
-                "\t\t\tSM.error(\"%s::%s\", __ps);\n" 
+                "\t\t\tSM.error(\"%s::%s\", this.__cs);\n" 
                 % (klass.name, method.name)
             )
         
@@ -542,13 +545,13 @@ def compile_state_method(klass, method_set, nf, old):
     # bodies of many methods into one method.
     if len(method_set):
         method_set.add(method)
-        nf.write("\t\t\tswitch(this.__ps) {\n")
+        nf.write("\t\t\tswitch(this.__cs) {\n")
         
         for method in method_set:
-            nf.write("\t\t\t")
+            nf.write("\t\t\t\t")
             for from_state in method.from_states:
                 nf.write("case %d: " % state_ids[from_state])
-            nf.write("\n\t\t\t{\n")
+            nf.write("{\n")
             
             # make sure that method parameter names are adjusted if the
             # various methods use different param names (but with the same
@@ -556,8 +559,8 @@ def compile_state_method(klass, method_set, nf, old):
             normalize_var_names(method.param_names, method.type_bounds)
             
             nf.write(old[method.body_span[0]:method.body_span[1]][1:])
-            nf.write("\n\t\t\t}\n")
-            nf.write("\t\t\tbreak;\n")
+            nf.write("\n\t\t\t\t\tbreak;")
+            nf.write("\n\t\t\t\t}\n")
         nf.write("\t\t\t}\n")
     
     # life is easy, only one method to deal with
@@ -566,7 +569,8 @@ def compile_state_method(klass, method_set, nf, old):
     
     nf.write(
         "\n\t\t} catch(Exception e) {\n\t\t\tSystem.out.println(e);" +
-        "\n\t\t\tSystem.exit(1);\n\t\t}\n"
+        "\n\t\t\tSystem.exit(1);\n\t\t} finally {\n" +
+        "\t\t\tthis.__doTrans();\n\t\t}\n"
     )
     
     nf.write("\t}\n")
@@ -600,9 +604,24 @@ def compile_class_file(klass, package_name, of, nf):
     nf.write(old[klass.header_span[0]:klass.header_span[1]])
     nf.write("{\n")
     
-    # previous and current state parameters
+    # previous and current state parameters. __is is defaulted to true as that
+    # will be the case when the constructor is called.
     if not len(klass.parents):
-        nf.write("\tprotected int __cs, __ps;\n")
+        nf.write("\tprotected int __cs, __ns;\n")
+        nf.write("\tprotected boolean __is = true;\n")
+        
+        # checkTrans method
+        nf.write("\tprotected boolean __checkTrans(int method_id) {\n")
+        nf.write("\t\tif(!this.__is) {\n\t\t\tthis.__is = true;\n")
+        nf.write("\t\t\treturn (this.__ns = SM.trans[this.__cs][method_id]) >= 0;\n")
+        nf.write("\t\t}\n\t\treturn true;\n\t}\n")
+        
+        # doTrans method
+        nf.write("\tprotected void __doTrans() {\n")
+        nf.write("\t\tif(this.__is) {\n")
+        nf.write("\t\t\tthis.__is = false;\n")
+        nf.write("\t\t\tthis.__cs = this.__ns;\n")
+        nf.write("\t\t}\n\t}\n")
     
     # params
     for name, (start_param, end_param) in klass.params.values():

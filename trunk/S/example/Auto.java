@@ -1,11 +1,24 @@
 package example;
 import example.SM;
 public class Auto {
-	protected int __cs, __ps;
+	protected int __cs, __ns;
+	protected boolean __is = true;
+	protected boolean __checkTrans(int method_id) {
+		if(!this.__is) {
+			this.__is = true;
+			return (this.__ns = SM.trans[this.__cs][method_id]) >= 0;
+		}
+		return true;
+	}
+	protected void __doTrans() {
+		if(this.__is) {
+			this.__is = false;
+			this.__cs = this.__ns;
+		}
+	}
 	public void turnOff() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][7]) < 0) {
-			SM.error("Auto::turnOff", __ps);
+		if(!this.__checkTrans(7)) {
+			SM.error("Auto::turnOff", this.__cs);
 		}
 		try {
  
@@ -14,12 +27,13 @@ public class Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public void reverse() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][1]) < 0) {
-			SM.error("Auto::reverse", __ps);
+		if(!this.__checkTrans(6)) {
+			SM.error("Auto::reverse", this.__cs);
 		}
 		try {
  
@@ -28,10 +42,12 @@ public class Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public Auto() {
-		this.__cs = 3;
+		this.__ns = 3;
 		try {
  
         System.out.println("AUTO: Off (constructor)"); 
@@ -39,40 +55,40 @@ public class Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public void forward() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][6]) < 0) {
-			SM.error("Auto::forward", __ps);
+		if(!this.__checkTrans(2)) {
+			SM.error("Auto::forward", this.__cs);
 		}
 		try {
-			switch(this.__ps) {
-			case 2: 
-			{
+			switch(this.__cs) {
+				case 2: {
  
         System.out.println("AUTO: Forward (from Neutral)."); 
     
-			}
-			break;
-			case 0: 
-			{
+					break;
+				}
+				case 0: {
  
         System.out.println("AUTO: Forward (from Reverse)."); 
     
-			}
-			break;
+					break;
+				}
 			}
 
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public void neutral() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][4]) < 0) {
-			SM.error("Auto::neutral", __ps);
+		if(!this.__checkTrans(4)) {
+			SM.error("Auto::neutral", this.__cs);
 		}
 		try {
  
@@ -81,12 +97,13 @@ public class Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public void turnOn() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][0]) < 0) {
-			SM.error("Auto::turnOn", __ps);
+		if(!this.__checkTrans(1)) {
+			SM.error("Auto::turnOn", this.__cs);
 		}
 		try {
  
@@ -95,6 +112,8 @@ public class Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 }

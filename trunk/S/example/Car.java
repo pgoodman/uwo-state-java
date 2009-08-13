@@ -3,7 +3,7 @@ import example.Auto;
 import example.SM;
 public class Car extends Auto {
 	public Car() {
-		this.__cs = 3;
+		this.__ns = 3;
 		try {
  
         System.out.println("CAR: Off (constructor)"); 
@@ -11,12 +11,16 @@ public class Car extends Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 	public void reverse() {
-		this.__ps = this.__cs;
-		if((this.__cs = SM.trans[this.__cs][3]) < 0) {
-			this.__cs = this.__ps;
+		boolean __wis = this.__is;
+		if(!this.__checkTrans(0)) {
+			if(!__wis) {
+				this.__is = false;
+			}
 			super.reverse();
 			return;
 		}
@@ -27,6 +31,8 @@ public class Car extends Auto {
 		} catch(Exception e) {
 			System.out.println(e);
 			System.exit(1);
+		} finally {
+			this.__doTrans();
 		}
 	}
 }

@@ -60,9 +60,24 @@ class JavaMethod(object):
     
     methods = Set() # set of all JavaMethod instances
     
-    def __init__(self, **kargs):
+    def __init__(self, transitions = [ ], **kargs):
         self.__dict__.update(kargs) # I'm lazy :P go look in parser.py
         self.has_parent_method = False
         self.set = None
+        self._transitions = transitions or [ ]
         JavaMethod.methods.add(self)
+    
+    def transitions(self):
+        """
+        Generate the set of transitions on this method.
+        """
+        for trans in self._transitions:
+            for from_state in trans[0]:
+                yield from_state, trans[1]
+    
+    def has_transitions(self):
+        """
+        Return whether or not this method has some transitions.
+        """
+        return len(self._transitions) > 0
     

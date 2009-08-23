@@ -291,21 +291,19 @@ def parse_class_body():
                 end_header = peek().lexpos - 1
                 
                 # state transitions
-                from_states = to_state = None
-                
+                transitions = None                
                 if can_have_states:
                     # starting state for the class constructor, no trans
                     if is_constructor:
-                        from_states = Set()
                         if peek("STATE"):
-                            to_state = accept("STATE").value
+                            state = accept("STATE").value
                             name = "$C" # normalize constructor name
-                            
-                            from_states.add(to_state)
-                            klass.constructor_states.add(to_state)
+                            klass.constructor_states.add(state)
+                            transitions = [(Set(("$0",)), state)]
+
                     # normal public method
                     else:
-                        from_states, to_state = parse_method_states()                    
+                        transitions = parse_method_states()
                 
                 # method body
                 start_body = end_body = 0
@@ -350,8 +348,7 @@ def parse_class_body():
                         file = klass.file,
                         is_constructor = is_constructor,
                         klass = klass,
-                        from_states = from_states,
-                        to_state = to_state,
+                        transitions = transitions,
                         can_have_states = can_have_states,
                         
                         # lexical spans of the header and body of this
@@ -405,21 +402,24 @@ def parse_method_states():
     
     Parse the state transitions for a method.
     """
+    transitions = [ ]
     next_is_state = peek("MUL", "STATE")    
     from_states = klass.states # default for identity
     to_state = None
+    found_states = False
     
-    if next_is_state:        
+    while next_is_state:
+        found_states = True
         if next_is_state.type == "MUL":
             accept("MUL")
         else:
             from_states = Set()
             parse_states(from_states)
-        
         accept("STATE_TRANS")
-        to_state = accept("STATE").value
-        
-    return from_states, to_state
+        transitions.append((from_states, accept("STATE").value))
+        next_is_state = maybe("SEMICOLON") and peek("MUL", "STATE") or False
+    
+    return transitions
 
 def parse_method_params(inferred_method_types):
     """

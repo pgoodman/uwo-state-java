@@ -9,6 +9,7 @@ public class Test {
         car.forward();
         car.reverse(); /* Car::reverse() specialization */
         car.neutral();
+        car.forward();
         car.reverse(); /* Auto::reverse() */
         car.turnOff();
     }

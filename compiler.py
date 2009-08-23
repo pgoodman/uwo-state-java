@@ -245,49 +245,31 @@ def add_method_transitions():
     add_method_transitions(void) -> void
     
     Add in the transitions to each class. This goes over all methods
-    that have state transitions or can have transitions and 
+    that have state transitions or can have transitions.
     """
     
-    def check_if_method_deterministic(method, other):
-        klass.check_if_constructors(method, other)
-
-        # two distinct methods of the same signature have the 
-        # same starting state, i.e. non-deterministic
-        inter_states = method.from_states & other.from_states        
-        if len(inter_states):
-            raise JStateError(
-                "Non-deterministic transition from state(s) " +
-                "%s in %s:%d and %s:%s."
-                % (", ".join(inter_states), method.file, 
-                   method.line, other.file, other.line)
-            )
+    # make a new JavaMethod transitions() method for identity transitions
+    # for a particular object
+    def identity_transitions(klass):
+        def transitions():
+            for state in klass.states:
+                yield state, state
+        return transitions
     
     for klass in state_classes():
-        for method_set in klass.method_sets():
-            unchecked = method_set.copy()
-            
-            # add in the transitions.
-            for method in method_set:
-                unchecked.remove(method)
-                
-                if method.is_constructor and not len(method.from_states):
+        for method in klass.methods():
+            if not method.has_transitions():
+                if method.is_constructor:
                     raise JStateError(
-                        "Missing initial state on class "+
-                        "constructor in %s:%d." 
+                        "Missing initial state on class constructor in %s:%d." 
                         % (method.file, method.line)
                     )
-                
-                # go check for non-deterministic transitions, this
-                # check is for local class only
-                for other in unchecked:
-                    check_if_method_deterministic(
-                        method,
-                        other
-                    )
-                
-                # add in the transitions
-                for state in method.from_states:
-                    klass.add_transition(state, method)
+                else:
+                    method.transitions = identity_transitions(klass)
+            
+            # add in the transitions
+            for from_state, to_state in method.transitions():
+                klass.add_transition(from_state, to_state, method)
 
 def inherit_method_transitions(parent_klass, klass):
     """
@@ -296,13 +278,13 @@ def inherit_method_transitions(parent_klass, klass):
     Copy methods from the parent class into the child class.
     """
     
-    for trans_from, trans_to, method in parent_klass.method_transitions():                    
+    for trans_from, trans_to, method in parent_klass.transitions():                    
         # constructors are not inherited
         if method.is_constructor:
             has_constructor = klass.has_transition(
                 trans_from, 
                 trans_to, 
-                method.name, 
+                method.name,
                 method.signature
             )
             if not has_constructor:
@@ -313,8 +295,9 @@ def inherit_method_transitions(parent_klass, klass):
                        ", ".join(method.signature[1:]),
                        trans_to, parent_klass.name, klass.file)
                 )
-        elif method.can_have_states:
-            klass.add_transition(trans_from, method, inherit=True)        
+        #elif method.can_have_states:
+        else:
+            klass.add_transition(trans_from, trans_to, method, inherit=True)        
 
 def check_contracts():
     """
@@ -371,7 +354,7 @@ def check_state_reachability():
         keep_going = True
         
         # build the set of transitions
-        for from_state, to_state, _ in klass.method_transitions():
+        for from_state, to_state, _ in klass.transitions():
             if from_state != to_state:
                 transitions.add((from_state, to_state))
         
@@ -419,9 +402,10 @@ def make_trans_table():
         # times (as a result of inheritance / many start states), but 
         # that's not an issue!
         for klass in state_classes():
-            for from_state, to_state, method in klass.method_transitions():
-                j = m[state_ids[from_state]][method_ids[method]]
-                m[state_ids[from_state]][method_ids[method]] = state_ids[to_state]
+            for from_state, to_state, method in klass.transitions():
+                if not method.is_constructor:
+                    j = m[state_ids[from_state]][method_ids[method]]
+                    m[state_ids[from_state]][method_ids[method]] = state_ids[to_state]
     
     # this is to make sure that we add the transitions in the correct order
     rec_propagate(add_transitions)
@@ -508,9 +492,8 @@ def compile_state_method(klass, method_set, nf, old):
     
     # constructor, initialize the class to a state.
     if method.is_constructor:
-        nf.write(
-            "\t\tthis.__ns = %d;\n" % state_ids[method.to_state]
-        )
+        for _, to_state in method.transitions():
+            nf.write("\t\tthis.__ns = %d;\n" % state_ids[to_state])
     
     # normal state method
     else:
@@ -549,7 +532,7 @@ def compile_state_method(klass, method_set, nf, old):
         
         for method in method_set:
             nf.write("\t\t\t\t")
-            for from_state in method.from_states:
+            for from_state, _ in method.transitions():
                 nf.write("case %d: " % state_ids[from_state])
             nf.write("{\n")
             

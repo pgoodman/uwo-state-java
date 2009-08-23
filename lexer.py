@@ -124,18 +124,3 @@ def t_newline(t):
 def t_error(t):
     print "Scanner Error: illegal character '%s'." % t.value[0]
     t.lexer.skip(1)
-
-# build
-if __name__ == '__main__':
-    import ply.lex as lex
-    lexer = lex.lex()
-    lexer.input(
-    """
-    class Moo {
-        private int bar() { }
-    }
-    """
-    )
-    for tok in lexer:
-        #pass
-        print tok

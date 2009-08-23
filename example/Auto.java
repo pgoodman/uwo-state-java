@@ -39,6 +39,7 @@ public class Auto {
     public void forward() :Neutral -> :Forward { 
         System.out.println("AUTO: Forward (from Neutral)."); 
     }
+    
     public void forward() :Reverse -> :Forward { 
         System.out.println("AUTO: Forward (from Reverse)."); 
     }

@@ -166,7 +166,9 @@ def check_parents():
         klass.parents.difference_update(to_remove)
         to_remove.clear()
 
-def rec_propagate(each_fn, all_fn = (lambda x: x)):
+def rec_propagate(each_fn, 
+                  all_fn = (lambda x: None), 
+                  ignore_type_p = (lambda p: p.is_interface)):
     """
     rec_propagate(function, function) -> void
 
@@ -176,7 +178,7 @@ def rec_propagate(each_fn, all_fn = (lambda x: x)):
     def propagate(klass, unseen_types):
         for parent in klass.parents:
             parent_klass = types[parent]
-            if parent_klass.is_interface:
+            if ignore_type_p(parent_klass):
                 continue
             if parent_klass in unseen_types:
                 unseen_types.remove(parent_klass)
@@ -187,7 +189,7 @@ def rec_propagate(each_fn, all_fn = (lambda x: x)):
     # initialize, make a set of all classes
     unseen_types = Set()
     for t in type_list:
-        if not t.is_interface:
+        if not ignore_type_p(t):
             unseen_types.add(t)
 
     while len(unseen_types):
@@ -306,6 +308,19 @@ def check_contracts():
     Check that each class has all of the methods that each of its
     implemented interfaces require it have for every state.
     """
+    
+    # Propagate information from parent interfaces to child interfaces.
+    def inherit_info(parent_inter, inter):
+        if parent_inter.is_interface:
+            inter.non_state_methods.extend(parent_inter.non_state_methods)
+    
+    # propagate interface information from parent interfaces to child
+    # interfaces
+    rec_propagate(
+        inherit_info, 
+        ignore_type_p = (lambda k: not k.is_interface)
+    )
+    
     missing_methods = [ ]
     
     for klass in state_classes():
@@ -567,6 +582,7 @@ def compile_non_state_method(header_span, body_span, nf, old):
     nf.write("\t")
     nf.write(old[header_span[0]:header_span[1]])
     nf.write(" {\n")
+    #nf.write("\t\tif(this.__is) {\n\t\t\tSystem.exit(1);\n\t\t}\n")
     nf.write(old[body_span[0]:body_span[1]][1:])
     nf.write("\n\t}\n")
 
@@ -593,11 +609,12 @@ def compile_class_file(klass, package_name, of, nf):
         nf.write("\tprotected int __cs, __ns;\n")
         nf.write("\tprotected boolean __is = true;\n")
         
-        # checkTrans method
+        # checkTrans method, returns false to not allow calls to transitioning
+        # methods when already transitioning
         nf.write("\tprotected boolean __checkTrans(int method_id) {\n")
         nf.write("\t\tif(!this.__is) {\n\t\t\tthis.__is = true;\n")
         nf.write("\t\t\treturn (this.__ns = SM.trans[this.__cs][method_id]) >= 0;\n")
-        nf.write("\t\t}\n\t\treturn true;\n\t}\n")
+        nf.write("\t\t}\n\t\treturn false;\n\t}\n")
         
         # doTrans method
         nf.write("\tprotected void __doTrans() {\n")
@@ -691,6 +708,7 @@ def test_compiler():
         "./test/UnreachableStates",
         "./test/NonStateInherit",
         "./test/FailedContract",
+        "./test/FailedParentContract",
     )
     for test in tests:
         print "\n-------------------------------------------"

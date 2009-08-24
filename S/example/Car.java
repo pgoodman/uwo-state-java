@@ -17,7 +17,7 @@ public class Car extends Auto {
 	}
 	public void reverse() {
 		boolean __wis = this.__is;
-		if(!this.__checkTrans(3)) {
+		if(!this.__checkTrans(2)) {
 			if(!__wis) {
 				this.__is = false;
 			}

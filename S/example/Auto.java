@@ -8,7 +8,7 @@ public class Auto {
 			this.__is = true;
 			return (this.__ns = SM.trans[this.__cs][method_id]) >= 0;
 		}
-		return true;
+		return false;
 	}
 	protected void __doTrans() {
 		if(this.__is) {
@@ -17,7 +17,7 @@ public class Auto {
 		}
 	}
 	public void turnOff() {
-		if(!this.__checkTrans(2)) {
+		if(!this.__checkTrans(3)) {
 			SM.error("Auto::turnOff", this.__cs);
 		}
 		try {
@@ -32,7 +32,7 @@ public class Auto {
 		}
 	}
 	public void reverse() {
-		if(!this.__checkTrans(4)) {
+		if(!this.__checkTrans(5)) {
 			SM.error("Auto::reverse", this.__cs);
 		}
 		try {

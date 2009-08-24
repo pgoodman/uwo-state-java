@@ -189,6 +189,11 @@ class JavaType(object):
                 yield method_set
     
     def methods(self):
+        """
+        methods(void) -> Generator<JavaMethod>
+        
+        Generate all of the type's methods.
+        """
         for method_set in self.method_sets():
             for method in method_set:
                 yield method

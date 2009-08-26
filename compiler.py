@@ -719,5 +719,7 @@ def test_compiler():
     print "Done testing."
 
 if __name__ == "__main__":
-    compile_project("./example/")
-    #test_compiler()
+    if len(sys.argv) >= 2:
+        compile_project(sys.argv[1])
+    else:
+        test_compiler()

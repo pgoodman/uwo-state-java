@@ -17,7 +17,7 @@ public class Auto {
 		}
 	}
 	public void turnOff() {
-		if(!this.__checkTrans(3)) {
+		if(!this.__checkTrans(5)) {
 			SM.error("Auto::turnOff", this.__cs);
 		}
 		try {
@@ -32,7 +32,7 @@ public class Auto {
 		}
 	}
 	public void reverse() {
-		if(!this.__checkTrans(5)) {
+		if(!this.__checkTrans(6)) {
 			SM.error("Auto::reverse", this.__cs);
 		}
 		try {
@@ -60,7 +60,7 @@ public class Auto {
 		}
 	}
 	public void forward() {
-		if(!this.__checkTrans(1)) {
+		if(!this.__checkTrans(3)) {
 			SM.error("Auto::forward", this.__cs);
 		}
 		try {
@@ -87,7 +87,7 @@ public class Auto {
 		}
 	}
 	public void neutral() {
-		if(!this.__checkTrans(7)) {
+		if(!this.__checkTrans(1)) {
 			SM.error("Auto::neutral", this.__cs);
 		}
 		try {

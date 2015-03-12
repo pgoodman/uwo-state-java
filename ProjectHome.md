@@ -1,0 +1,1 @@
+A source-to-source compiler for a modified subset of the Java language that outputs Java code that supports states and state transitions in classes. This project  was made for Prof. Sheng Yu of The University of Western Ontario.
